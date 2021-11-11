@@ -1,0 +1,34 @@
+# read in data and filter ROI relavant to thickness and Volumn
+iter_csv = pd.read_csv('ukb47552.csv', iterator=True, chunksize=10000,error_bad_lines=False)
+data = pd.concat ([chunk.dropna(how='all') for chunk in iter_csv] )
+data.shape #502462 subjects, 2545-1 measurements 
+
+# %%
+# filter data by the field id related to "thickness" and "Volumn"
+url = "https://biobank.ndph.ox.ac.uk/showcase/label.cgi?id=196"
+field_id = pd.DataFrame(pd.read_html(url)[0])
+# still having problem with read_html, error: lmxl is not installed (but I definitely have it installed)
+rows = [s for s, x in enumerate(field_id["Description"]) if "thickness" in x or "Volume" in x]
+filtered_id = field_id.loc[rows]["Field ID"].apply(str)
+
+# %%
+instance2_dat = instance3_dat = pd.DataFrame(data["eid"])
+
+for col in data.columns[1:]:
+    field, instance = col.split("-")
+    if any(filtered_id == field):
+        if instance == "2.0":
+            instance2_dat[field] = data[col]
+            if instance == "3:0":
+                instance3_dat[field] = data[col] 
+ 
+
+instance2_dat.dropna(axis = 0, how = "any", inplace=True)
+instance3_dat.dropna(axis = 0, how = "any", inplace=True)
+print(instance2_dat.shape, instance3_dat.shape) 
+# Consider only complete cases, each instances have 43107 subjects with 62 
+
+# %%
+# Take a subset of instance2 first
+sub_dat = instance2_dat.iloc[0:100 ]
+sub_dat.to_csv("sub_dat.csv", index=True)
