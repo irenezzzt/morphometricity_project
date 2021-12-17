@@ -33,6 +33,8 @@ y= 1 + beta0i + beta*X' + eps
 % Va = 13.150
 % Ve = 2.2749
 % Lnew = -7.7757
+
+
 [flag, m2, SE, Va, Ve, Lnew]  = Morphometricity(y', X, ASM, alg=1) # expected
 
 % flag = 1

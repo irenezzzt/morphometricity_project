@@ -66,6 +66,7 @@ def EM_update(y, X, K, Va, Ve):
     V = Va * K + Ve * np.identity(n = N)
 
     # update projection matrix P:
+
     inv_V = np.linalg.inv(V)
     temp = np.linalg.solve(V, X).dot( np.linalg.solve(X.T.dot(inv_V).dot(X), X.T) )
     P = (np.identity(n = N) - temp).dot(inv_V)  
@@ -77,7 +78,7 @@ def EM_update(y, X, K, Va, Ve):
     else:
         E = np.linalg.eigvals(V)
         log_detV=sum(np.log(E + 2**(-52)))
-        lik_new = - 0.5*log_detV - 0.5*np.log(np.linalg.det(X.T.dot(np.linalg.inv(V).dot(X)))) - 0.5*y.T.dot(P).dot(y)
+        lik_new = - 0.5*log_detV - 0.5*np.log(np.linalg.det(X.T.dot(inv_V.dot(X)))) - 0.5*y.T.dot(P).dot(y)
 
     return [V, P, lik_new]
 # %%
@@ -96,6 +97,7 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
         - tol int: convergence threshold, default 10^(-6)
 
     Output (parameters to be estimated):
+        - beta estimated fixed effect, standard error, and the associated hypothesis test statistic, p-value, significance (Add later)
         - Va variance explained by the ASM (random intercept)
         - Ve residual variance
         - m2  estimated morphometricity, defined as Va/(Va+Ve)
@@ -106,8 +108,8 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
     N = X.shape[0]
 
     # standardize X, y to have mean 0, var 1 for each column 
-    X = (X - np.mean(X, axis=0))/np.std(X, axis= 0)
-    y = (y - y.mean())/(y.std())
+    #X = (X - np.mean(X, axis=0))/np.std(X, axis= 0)
+    #y = (y - y.mean())/(y.std())
 
     # reconstruct ASM if having negative eigenvalues
     D, U = np.linalg.eigh(K)
@@ -151,8 +153,10 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
         T = np.array([Va,Ve]) + np.linalg.solve(Info, Score)
         # set variance values to be 1e-6*Vp if negative (Vp=1 for normalized y) and normalize
         T[T < 0] = 1e-6  
-        # Va, Ve = T/sum(T)
-        Va, Ve = T
+        if method == "observed":
+             Va, Ve = T/sum(T)
+        else:
+            Va, Ve = T
         # update covariance V, projection matrix P and likelihood  
         V, P, lik_new = EM_update(y = y, X = X, K = K, Va = Va, Ve = Ve)
     
@@ -162,7 +166,7 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
 
     inv_Info = np.linalg.inv(Info)
     std_err = np.sqrt( (m2/Va)**2 * (1-m2)**2 * inv_Info[0][0] - 2 * (1-m2) * m2 * inv_Info[0][1] + m2**2 * inv_Info[1][1] ) 
-     
+    # m2 = Va/(Va+Ve) 
 
     # diagnosis of convergence
     if iter == max_iter and abs(lik_new - lik_old)>=tol :
@@ -181,3 +185,5 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
 
 
 
+
+# %%
