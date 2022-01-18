@@ -16,6 +16,7 @@ from sklearn import preprocessing
 
 
 
+
 # %%
 def compute_Score(y, P, K):
     '''
@@ -173,6 +174,12 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
         res = 'ReML algorithm did not converge'
     else:
         res = 'ReML algorithm has converged'
+    # model selection cretiria
+   
+    S = np.identity(n = N) - Ve * P
+    RSS = Ve * (N-np.trace(S))
+    AIC = N*np.log(RSS) + 2*np.trace(S)
+    BIC = N*np.log(RSS) + np.log(N)*np.trace(S)
     
     return { 
         'flag': res,
@@ -181,9 +188,51 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
         'Estimated standard error': std_err,
         'Morphological variance': Va,
         'Residual variance': Ve,
-        'ReML likelihood': lik_new}
+        'ReML likelihood': lik_new,
+        'AIC':AIC,
+        'BIC':BIC
+        }
 
 
 
 
 # %%
+<<<<<<< HEAD
+def gauss_ker(vec,mat, S2):
+    '''
+    This is a helper function to compute the similarity between an individual and the rest
+    Input:
+        - mat: matrix of size n x M, n individuals, M imaging measures
+        - vec: vector of size M, observation for one specific individual 
+        - S2: vector of size M, pre-calculated variance for each imaging measures
+    Output:
+        - r: vector of size N, similarity between zi and each individual in Z
+    '''
+    n, M = mat.shape 
+    r = np.exp(- np.divide( (mat-vec)**2, S2*M).sum(axis=1))
+    
+    return r
+
+def gauss_similarity(Z):
+    '''
+    This is the function is to compute the ASM matrix by default gauss kernel 
+    Input:
+        - Z, matrix of size n x M, each row [i, ] is an individual Xi
+    Output:
+        - R, matrix of size n x n, 
+            each entry [i,j] is a real number, similarity between Xi and Xj
+    '''
+    n, M = Z.shape
+    Z_copy = Z
+    S2 = Z.std(axis=0)**2
+    R = np.apply_along_axis(gauss_ker, axis=1, arr=Z, mat=Z_copy, S2=S2)
+    return R
+    
+
+
+
+
+# %%
+
+=======
+>>>>>>> fc1298c46044cc4e54df8587a15888adfdaf5566
