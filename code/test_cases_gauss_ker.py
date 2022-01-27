@@ -18,7 +18,8 @@ from random import seed
 from random import choice
 
 
-from reML import compute_Score, compute_FisherInfo, EM_update, morph_fit, gauss_ker, gauss_similarity
+ 
+from morphometricity import compute_Score, compute_FisherInfo, EM_update, morph_fit, gauss_ker, gauss_similarity
 
 #%%
 # small test cases with simulated data to debug
@@ -1096,7 +1097,18 @@ res = res[res[:,0]==1] # subset those who converged
 res = res[np.isnan(res[:,3])==False]
 print(res.shape[0]/n_sim)
 
-res[:,2].mean()
-res[:,2].std()
+res[:,2].mean() # 0.9999
+res[:,2].std()  # 2.3247e-10
 # This is similar to what we simulated... 
 # all morphometricity from bootstrap (with Gaussian kernel ASM) shows ~0.9999 
+
+
+# plotting tips: make the range of plots the same.
+
+# for gaussian kernel how many pairs are outside 1SD/2SD of the 'similarity' (check K=I, or block of 1s as well)
+# check the standard deviation of m2 when using gaussian kernel. 
+# check AIC/BIC (use log scale)
+#    - literature on cAIC (if it always prefers higher morphometricity)
+#    - print each component of AIC for gaussian and linear kernel
+# simulation process change from Z -> estimated ASM -> y to pre-specified ASM -> Z -> y
+#    - if possible, check different ASM structrure that both linear and gaussian are mis-specified
