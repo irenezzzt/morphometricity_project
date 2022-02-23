@@ -197,7 +197,7 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
 
 
 # %%
-<<<<<<< HEAD
+ 
 def gauss_ker(vec,mat, S2):
     '''
     This is a helper function to compute the similarity between an individual and the rest
@@ -233,6 +233,4 @@ def gauss_similarity(Z):
 
 
 # %%
-
-=======
->>>>>>> fc1298c46044cc4e54df8587a15888adfdaf5566
+ 
