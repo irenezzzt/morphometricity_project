@@ -16,7 +16,7 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 
 
-os.chdir('/Users/tingzhang/Documents/GitHub/morphometricity_project/data')
+os.chdir('/Users/tingzhang/Documents/GitHub/morphometricity/data')
 
 # %%
 iter_csv = pd.read_csv('ukb47552.csv', iterator=True, chunksize=10000,error_bad_lines=False)
@@ -39,8 +39,30 @@ data_demographics = data_demographics[['eid','age_at_recruitment', 'sex']]
 # %%
 merge_data = data.merge(right = data_demographics, how="inner", on="eid")
 
+
 # %%
-instance2_dat = instance3_dat = pd.DataFrame(merge_data[["eid","age_at_recruitment","sex"]])
+# extract more phenotypes
+# ukb field 20544 #2(SCZ), #12(Autism), #14(ADD/ADHD)
+#     field 20191 fluid intelligence at     
+
+column_codes = {
+    "eid":"eid", 
+    "21003-2.0": "age_at_ses2",
+    "20191-0.0":"fluid intelligence",
+    "20544-0.2":"scz",
+    "20544-0.12":"autism",
+    "20544-0.14":"adhd"}
+
+phenotype = pd.read_csv("current.csv", usecols=column_codes.keys()) 
+phenotype = phenotype.dropna(axis=0, how="all")
+# %%
+merge_data2 = merge_data.merge(right=phenotype, how="inner", on="eid")
+merge_data2.shape
+#(6801, 2552)
+traits = merge_data2[['eid', 'age_at_recruitment', 'sex', '20191-0.0', '20544-0.2', '20544-0.12','20544-0.14', '21003-2.0']]
+
+# %%
+instance2_dat = instance3_dat = pd.DataFrame(traits)
 for col in merge_data.columns[1:2545]:
     field, instance = col.split("-")
     if any(filtered_id == field):
@@ -48,10 +70,11 @@ for col in merge_data.columns[1:2545]:
             instance2_dat[field] = data[col]
             if instance == "3:0":
                 instance3_dat[field] = data[col] 
- 
 
-instance2_dat.dropna(axis = 0, how = "any", inplace=True)
-instance3_dat.dropna(axis = 0, how = "any", inplace=True)
+instance2_dat.drop(columns=['eid', 'age_at_recruitment', 'sex', '20191-0.0', '20544-0.2', '20544-0.12','20544-0.14', '21003-2.0'], axis=1)
+instance3_dat.drop(columns=['eid', 'age_at_recruitment', 'sex', '20191-0.0', '20544-0.2', '20544-0.12','20544-0.14', '21003-2.0'], axis=1)
+instance2_dat.dropna(axis = 0, how = "all", inplace=True)
+instance3_dat.dropna(axis = 0, how = "all", inplace=True)
 print(instance2_dat.shape, instance3_dat.shape) 
 # Consider only complete cases, each instances have 43107 subjects with 62 
 
@@ -64,4 +87,7 @@ out = os.getcwd()
 df_map = {'sub_dat': sub_dat,'ses2': instance2_dat, 'ses3': instance3_dat}
 for name, df in df_map.items():
     df.to_csv(os.path.join(out, f'{name}.csv')) 
+
 # %%
+# application data:
+
