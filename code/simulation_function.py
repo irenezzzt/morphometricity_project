@@ -45,6 +45,8 @@ def sim(N, M, L, m2, n_sim, kernel = "linear", fisher="expected"):
             eps = np.random.normal(loc=0, scale=Ve**(1/2), size = N)  # random error
             y = beta0i + beta.dot(X.T) + eps # response            
             
+            # simulation is running with 5 kernels as below: linear, Gaussian (bw = 2, 1, 0.5, 0.25)
+            # if other bandwidth or kernel is needed, can add here.
             ASM_lin = ASM 
             ASM_gau0 = gauss_similarity(Z, width=2)
             ASM_gau1 = gauss_similarity(Z, width=1)

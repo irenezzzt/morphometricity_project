@@ -20,7 +20,7 @@ os.chdir('/Users/tingzhang/Documents/GitHub/morphometricity/data')
 
 # %%
 iter_csv = pd.read_csv('ukb47552.csv', iterator=True, chunksize=10000,error_bad_lines=False)
-data = pd.concat ([chunk.dropna(how='all') for chunk in iter_csv] )
+data = pd.concat([chunk.dropna(how='all') for chunk in iter_csv] )
 data.shape #502462 subjects, 2545-1 measurements 
 
 # %%

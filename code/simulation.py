@@ -23,7 +23,20 @@ from simulation_function import sim
 #%%
 # Simulation 1: to verify the method - when model is correctly specified  
 # data generated from linear kernel
-[N,M,L] = [50, 100, 2]
+# N:        sample size
+# M:        number of brain mophological measures
+# L:        number of covariates (age and sex)
+# true_morph: true morphometricity in data generating process, ranging from 0 to 1 
+# n_sim:    number of repeats
+
+# outputs, currently we are only recording 
+#   1. mean_m2: the estimated morphometricity m2, averaged across n_sim times of simualtion 
+#   2. est_sd: theoretical standard deviation of m3, for each simulation, there is one, and average across n_sim times of simulation
+#   3. sd_m2 : sample standard deviation of n_sim number of m2, obtained from n_sim times of simulation
+#   4. AIC_choice: the proportion of each kernel chosen by AIC across n_sim times of simulation
+#   5. BIC_choice: the proportion of each kernel chosen by BIC across n_sim times of simulation
+
+[N,M,L] = [500, 100, 2]
 true_morph = np.linspace(0,1,11)
 n_sim = 1000
 
@@ -118,8 +131,10 @@ sorted(npzfile.files)
 npzfile['AIC']
 npzfile['BIC']
 
-#%% heat map for AIC BIC choice?
+# %% 
+# heat map for AIC BIC choice? X
 # change to stacked bar plot or overlapping bar plots (for 3-5 true m2)
+
 kernels=["linear", 'gauss bw4', 'gauss bw2', 'gauss bw1', 'gauss bw0.5']
 true_morph=['0','0.1','0.2','0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9','1.0']
 
@@ -169,10 +184,10 @@ plt.savefig('sim_fig2_lin.png',dpi=150)
 # %%
 # data generated from standard gaussian asm
 
-[N,M,L] = [50, 100, 2]
+[N,M,L] = [500, 100, 2]
 true_morph = np.linspace(0,1,11)
  
-n_sim = 500
+n_sim = 1000
 
 mean_m2 = np.ndarray(shape = (11, 5))
 est_sd = np.ndarray(shape = (11, 5))
@@ -305,7 +320,6 @@ ax.set_title('')
 fig.set_size_inches(15, 8)
 plt.savefig('sim_fig1_lin_sd2.png',dpi=150)
 
-# %%
-
+#  error bar affects the visual presentation, include in a table?
 
 

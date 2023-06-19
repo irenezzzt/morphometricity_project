@@ -235,5 +235,3 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
 
      
 
-# %%
- 
