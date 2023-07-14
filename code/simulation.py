@@ -1,7 +1,7 @@
 # %%
 # load the script
 from tkinter import W
-from turtle import shape
+from turtle import shape # not used, delete
 import numpy as np
 import math
 from numpy import linalg
