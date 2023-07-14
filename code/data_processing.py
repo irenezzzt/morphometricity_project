@@ -14,14 +14,18 @@ import random
 from sklearn import preprocessing
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
+import os
 
-
-os.chdir('/Users/tingzhang/Documents/GitHub/morphometricity/data')
+datadir = os.path.join(os.path.expanduser('~'),'data')
+# need to check if datadir exists and if not create it
+# if not os.path.exists(datadir):
+#    os.path.mkdir(datadir)
+os.chdir(datadir)
 
 # %%
 iter_csv = pd.read_csv('ukb47552.csv', iterator=True, chunksize=10000,error_bad_lines=False)
 data = pd.concat([chunk.dropna(how='all') for chunk in iter_csv] )
-data.shape #502462 subjects, 2545-1 measurements 
+data.shape #502462 subjects, 2545-1 measurements
 
 # %%
 # filter data by the field id related to "thickness" and "Volumn"
@@ -34,7 +38,7 @@ filtered_id = field_id.loc[rows]["Field ID"].apply(str)
 # %%
 iter_csv = pd.read_csv('ukb46307_demographics.csv', iterator=True, chunksize=10000,error_bad_lines=False)
 data_demographics = pd.concat ([chunk.dropna(how='all') for chunk in iter_csv] )
-data_demographics.shape #502462 subjects, 11 measurements 
+data_demographics.shape #502462 subjects, 11 measurements
 data_demographics = data_demographics[['eid','age_at_recruitment', 'sex']]
 # %%
 merge_data = data.merge(right = data_demographics, how="inner", on="eid")
@@ -43,17 +47,17 @@ merge_data = data.merge(right = data_demographics, how="inner", on="eid")
 # %%
 # extract more phenotypes
 # ukb field 20544 #2(SCZ), #12(Autism), #14(ADD/ADHD)
-#     field 20191 fluid intelligence at     
+#     field 20191 fluid intelligence at
 
 column_codes = {
-    "eid":"eid", 
+    "eid":"eid",
     "21003-2.0": "age_at_ses2",
     "20191-0.0":"fluid intelligence",
     "20544-0.2":"scz",
     "20544-0.12":"autism",
     "20544-0.14":"adhd"}
 
-phenotype = pd.read_csv("current.csv", usecols=column_codes.keys()) 
+phenotype = pd.read_csv("current.csv", usecols=column_codes.keys())
 phenotype = phenotype.dropna(axis=0, how="all")
 # %%
 merge_data2 = merge_data.merge(right=phenotype, how="inner", on="eid")
@@ -69,14 +73,14 @@ for col in merge_data.columns[1:2545]:
         if instance == "2.0":
             instance2_dat[field] = data[col]
             if instance == "3:0":
-                instance3_dat[field] = data[col] 
+                instance3_dat[field] = data[col]
 
 instance2_dat.drop(columns=['eid', 'age_at_recruitment', 'sex', '20191-0.0', '20544-0.2', '20544-0.12','20544-0.14', '21003-2.0'], axis=1)
 instance3_dat.drop(columns=['eid', 'age_at_recruitment', 'sex', '20191-0.0', '20544-0.2', '20544-0.12','20544-0.14', '21003-2.0'], axis=1)
 instance2_dat.dropna(axis = 0, how = "all", inplace=True)
 instance3_dat.dropna(axis = 0, how = "all", inplace=True)
-print(instance2_dat.shape, instance3_dat.shape) 
-# Consider only complete cases, each instances have 43107 subjects with 62 
+print(instance2_dat.shape, instance3_dat.shape)
+# Consider only complete cases, each instances have 43107 subjects with 62
 
 # %%
 # Take a subset of instance2 first
@@ -86,7 +90,7 @@ sub_dat = instance2_dat.iloc[0:1000]
 out = os.getcwd()
 df_map = {'sub_dat': sub_dat,'ses2': instance2_dat, 'ses3': instance3_dat}
 for name, df in df_map.items():
-    df.to_csv(os.path.join(out, f'{name}.csv')) 
+    df.to_csv(os.path.join(out, f'{name}.csv'))
 
 # %%
 # application data:
