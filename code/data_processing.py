@@ -72,8 +72,8 @@ for col in merge_data.columns[1:2545]:
     if any(filtered_id == field):
         if instance == "2.0":
             instance2_dat[field] = data[col]
-            if instance == "3:0":
-                instance3_dat[field] = data[col]
+        if instance == "3:0":
+            instance3_dat[field] = data[col]
 
 instance2_dat.drop(columns=['eid', 'age_at_recruitment', 'sex', '20191-0.0', '20544-0.2', '20544-0.12','20544-0.14', '21003-2.0'], axis=1)
 instance3_dat.drop(columns=['eid', 'age_at_recruitment', 'sex', '20191-0.0', '20544-0.2', '20544-0.12','20544-0.14', '21003-2.0'], axis=1)
