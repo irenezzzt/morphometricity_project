@@ -4,12 +4,12 @@
 # %%
 # libraries
 import numpy as np
-from numpy import linalg
+#from numpy import linalg
 from numpy.core.numeric import Inf, identity
 import pandas as pd
-import csv
+#import csv
 import itertools
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 
 
@@ -65,12 +65,12 @@ def compute_FisherInfo(y, P, K, method):
     '''
     This is a helper function to compute the Fisher information matrix 
     Input:
-        - y: nx1 array, phenotype
-        - P: nxn array, projection matrix that maps y to yhat
-        - K: anatomic similarity matrix
+        - y: n x 1 array, phenotype
+        - P: n x n array, projection matrix that maps y to yhat
+        - K: n x n array, anatomic similarity matrix
         - method: string, "average", "expected", or "observed" Fisher information
     Output:
-        - Info: 2x2 array for two parameters Va(anatomical variance) and Ve(residual variance)
+        - Info: 2 x 2 array for two parameters Va(anatomical variance) and Ve(residual variance)
     '''
     if method == "average" :
         Info_gg = 0.5*y.T.dot(P).dot(K).dot(P).dot(K).dot(P).dot(y)
@@ -91,6 +91,20 @@ def compute_FisherInfo(y, P, K, method):
     return Info
 # %%
 def EM_update(y, X, K, Va, Ve):
+    '''
+    This is a helper function to run the expectation maximization algorithm iteration updates 
+    Input:
+        - y:    nx1 array, phenotype
+        - X:    nxl array: l covariates such as age, sex, site etc.  
+        - K:    nxn array, between-subject anatomic similarity matrix
+        - Va:   numeric, variance explained by the ASM from the last iteration
+        - Ve:   numeric, residual variance from the last iteration
+    
+    Output:
+        - V:    nxn array, variance covariance matrix of y
+        - P:    nxn array, new projection matrix P that maps y to yhat
+        - liknew: numeric, new likelihood of this iteration
+    '''
     N = K.shape[0]
     # update covariance matrix V of y:
     V = Va * K + Ve * np.identity(n = N)
@@ -149,7 +163,11 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
         K = U.dot(D).dot(U.T) 
     else:
         K=K
-
+        
+    # check Fisher info method input
+    if method not in {"average", "expected", "observed"} :
+        return 'Method for fisher information is not accepted'
+    
     # initialize the anatomic variance, residual variance, and projection matrix.
     Vp = np.var(y)
     Va = Ve = 1/2*Vp
