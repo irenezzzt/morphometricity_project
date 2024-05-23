@@ -1,3 +1,4 @@
+# %%
 # functions for simulation
 from tkinter import W
 import numpy as np
@@ -18,10 +19,11 @@ import matplotlib.pyplot as plt
 #from random import choice
 import os
 import numpy.lib.recfunctions as rfn
+from operator import itemgetter
 
 """ This module include a single function that run simulation for n_sim replicates as followed:
     * for N subjects:
-    *   generates M morphological measures from multivariate-normal distribution, ;
+    *   generates M morphological measures from a multivariate-normal distribution, ;
     *   generates 2 covariates (age and sex) from two independent normal distribution(using sample mean and var from UKBB showcase)
     *   generates 1 phenotype with m2*100% of its variance is explained by M morphological measures, 
     *       with between subject similarity captured by self-specified kernel  
@@ -35,22 +37,24 @@ import numpy.lib.recfunctions as rfn
 import morphometricity 
 #from morphometricity import compute_Score, compute_FisherInfo, EM_update, morph_fit, gauss_ker, gauss_similarity
 
-
+# %%
 def sim(N, M, L, m2, n_sim, kernel = "linear", fisher="expected", width=1, max_iter=100, tol=10**(-4)):
     # prepare empty array to store simulation result
-    Va = m2*10; Ve = (1-m2)*10
-    res_lin = np.ndarray(shape = (n_sim, 9))
-    res_gau0 = np.ndarray(shape = (n_sim, 9))
-    res_gau1 = np.ndarray(shape = (n_sim, 9))
-    res_gau2 = np.ndarray(shape = (n_sim, 9))
-    res_gau3 = np.ndarray(shape = (n_sim, 9))
+    Va = m2*10; Ve = (1-m2)*10 # 10 is a scaler to make the variance comparable to the later simluated morphological measures Z
+   # res_lin =  np.ndarray(shape = (n_sim, 9))
+   # res_gau0 = np.ndarray(shape = (n_sim, 9))
+   # res_gau1 = np.ndarray(shape = (n_sim, 9))
+   # res_gau2 = np.ndarray(shape = (n_sim, 9))
+   # res_gau3 = np.ndarray(shape = (n_sim, 9))
+    res_lin = res_gau0 = res_gau1 = res_gau2= res_gau3 = []
 
     beta = np.random.normal(loc=0, scale=1, size = L)  # fixed effect 
 
     # the result we would like to keep for each iter, and their types
     name_type = [('flag', int), ("iter", int), ('estimated m2', float), ('estimated sd', float),
-                            ('theoretical var', float), ('residual var', float), ('reML likelihood', float),('aic', float), ('bic', float)]
-    
+                    ('theoretical var', float), ('residual var', float), ('reML likelihood', float),('aic', float), ('bic', float)]
+   
+    # check py: type tuple or name tuple
     
     for j in range(n_sim):
         np.random.seed(j*13+7)
@@ -82,80 +86,83 @@ def sim(N, M, L, m2, n_sim, kernel = "linear", fisher="expected", width=1, max_i
         est_ASM_gau3 = morphometricity.gauss_similarity(Z, width=1/4)
 
         temp = morphometricity.morph_fit(y=y, X=X, K=est_ASM_lin, method=fisher, max_iter=max_iter, tol=tol)
-        # transform the str to numeric for easier computation of convergence proportion
+        # transform the boolean to numeric for easier computation of convergence proportion
         temp['flag'] = (temp['flag'] == 'ReML algorithm has converged')*1 
-        res_lin[j] = temp # store result in previouly constructed empty array
+        res_lin.append(temp)
+        # store result in previouly constructed empty array
 
         temp = morphometricity.morph_fit(y=y, X=X, K=est_ASM_gau0, method=fisher, max_iter=max_iter, tol=tol)
         temp['flag'] = (temp['flag'] == 'ReML algorithm has converged')*1
-        res_gau0[j] = temp
+        res_gau0.append(temp)
 
         temp = morphometricity.morph_fit(y=y, X=X, K=est_ASM_gau1, method=fisher, max_iter=max_iter, tol=tol)
         temp['flag'] = (temp['flag'] == 'ReML algorithm has converged')*1
-        res_gau1[j] = temp
+        res_gau1.append(temp)
 
         temp = morphometricity.morph_fit(y=y, X=X, K=est_ASM_gau2, method=fisher, max_iter=max_iter, tol=tol)
         temp['flag'] = (temp['flag'] == 'ReML algorithm has converged')*1
-        res_gau2[j] = temp
+        res_gau2.append(temp)
 
         temp = morphometricity.morph_fit(y=y, X=X, K=est_ASM_gau3, method=fisher, max_iter=max_iter, tol=tol)
         temp['flag'] = (temp['flag'] == 'ReML algorithm has converged')*1
-        res_gau3[j] = temp
-
+        res_gau3.append(temp)
+    
+    # flags = [res_lin[i]['flag'] for i in range(n_sim)]
+    
     # recombobulate the each result array
-    res_lin = {'flag' : res_lin[:,0],
-                'iteration' : res_lin[:,1],
-                'estimated m2' : res_lin[:,2],
-                'estimated sd' : res_lin[:,3],
-                'theoretical sd': math.sqrt(res_lin[:,4]),
-                'residual var': res_lin[:,5],
-                'ReML likelihood': res_lin[:,6],
-                'aic': res_lin[:,7],
-                'bic': res_lin[:,8]
+    res_lin = {'flag' : [res_lin[i]['flag'] for i in range(n_sim)],
+                'iteration' : [res_lin[i]['iteration'] for i in range(n_sim)],
+                'estimated m2' : [res_lin[i]['Estimated morphometricity'] for i in range(n_sim)],
+                'estimated sd' : [res_lin[i]['Estimated standard error'] for i in range(n_sim)],
+                'theoretical sd': [math.sqrt(res_lin[i]['Morphological variance']) for i in range(n_sim)],
+                'residual var': [res_lin[i]['Residual variance'] for i in range(n_sim)],
+                'ReML likelihood': [res_lin[i]['ReML likelihood'] for i in range(n_sim)],
+                'aic': [res_lin[i]['AIC'] for i in range(n_sim)],
+                'bic': [res_lin[i]['BIC'] for i in range(n_sim)]
                 }
 
-    res_gau0 = {'flag' : res_gau0[:,0],
-                'iteration' : res_gau0[:,1],
-                'estimated m2' : res_gau0[:,2],
-                'estimated sd' : res_gau0[:,3],
-                'theoretical sd': math.sqrt(res_gau0[:,4]),
-                'residual var': res_gau0[:,5],
-                'ReML likelihood': res_gau0[:,6],
-                'aic': res_gau0[:,7],
-                'bic': res_gau0[:,8]
+    res_gau0 = {'flag' : [res_gau0[i]['flag'] for i in range(n_sim)],
+                'iteration' : [res_gau0[i]['iteration'] for i in range(n_sim)],
+                'estimated m2' : [res_gau0[i]['Estimated morphometricity'] for i in range(n_sim)],
+                'estimated sd' : [res_gau0[i]['Estimated standard error'] for i in range(n_sim)],
+                'theoretical sd': [math.sqrt(res_gau0[i]['Morphological variance']) for i in range(n_sim)],
+                'residual var': [res_gau0[i]['Residual variance'] for i in range(n_sim)],
+                'ReML likelihood': [res_gau0[i]['ReML likelihood'] for i in range(n_sim)],
+                'aic': [res_gau0[i]['AIC'] for i in range(n_sim)],
+                'bic': [res_gau0[i]['BIC'] for i in range(n_sim)]
                 }
 
-    res_gau1 = {'flag' : res_gau1[:,0],
-                'iteration' : res_gau1[:,1],
-                'estimated m2' : res_gau1[:,2],
-                'estimated sd' : res_gau1[:,3],
-                'theoretical sd': math.sqrt(res_gau1[:,4]),
-                'residual var': res_gau1[:,5],
-                'ReML likelihood': res_gau1[:,6],
-                'aic': res_gau1[:,7],
-                'bic': res_gau1[:,8]
+    res_gau1 = {'flag' : [res_gau1[i]['flag'] for i in range(n_sim)],
+                'iteration' : [res_gau1[i]['iteration'] for i in range(n_sim)],
+                'estimated m2' : [res_gau1[i]['Estimated morphometricity'] for i in range(n_sim)],
+                'estimated sd' : [res_gau1[i]['Estimated standard error'] for i in range(n_sim)],
+                'theoretical sd': [math.sqrt(res_gau1[i]['Morphological variance']) for i in range(n_sim)],
+                'residual var': [res_gau1[i]['Residual variance'] for i in range(n_sim)],
+                'ReML likelihood': [res_gau1[i]['ReML likelihood'] for i in range(n_sim)],
+                'aic': [res_gau1[i]['AIC'] for i in range(n_sim)],
+                'bic': [res_gau1[i]['BIC'] for i in range(n_sim)]
                 }
 
-    res_gau2 = {'flag' : res_gau2[:,0],
-                'iteration' : res_gau2[:,1],
-                'estimated m2' : res_gau2[:,2],
-                'estimated sd' : res_gau2[:,3],
-                'theoretical sd': math.sqrt(res_gau2[:,4]),
-                'residual var': res_gau2[:,5],
-                'ReML likelihood': res_gau2[:,6],
-                'aic': res_gau2[:,7],
-                'bic': res_gau2[:,8]
+    res_gau2 = {'flag' : [res_gau2[i]['flag'] for i in range(n_sim)],
+                'iteration' : [res_gau2[i]['iteration'] for i in range(n_sim)],
+                'estimated m2' : [res_gau2[i]['Estimated morphometricity'] for i in range(n_sim)],
+                'estimated sd' : [res_gau2[i]['Estimated standard error'] for i in range(n_sim)],
+                'theoretical sd': [math.sqrt(res_gau2[i]['Morphological variance']) for i in range(n_sim)],
+                'residual var': [res_gau2[i]['Residual variance'] for i in range(n_sim)],
+                'ReML likelihood': [res_gau2[i]['ReML likelihood'] for i in range(n_sim)],
+                'aic': [res_gau2[i]['AIC'] for i in range(n_sim)],
+                'bic': [res_gau2[i]['BIC'] for i in range(n_sim)]
                 }
 
-    res_gau3 = {'flag' : res_gau3[:,0],
-                'iteration' : res_gau3[:,1],
-                'estimated m2' : res_gau3[:,2],
-                'estimated sd' : res_gau3[:,3],
-                'theoretical sd': math.sqrt(res_gau3[:,4]),
-                'residual var': res_gau3[:,5],
-                'ReML likelihood': res_gau3[:,6],
-                'aic': res_gau3[:,7],
-                'bic': res_gau3[:,8]
+    res_gau3 = {'flag' : [res_gau3[i]['flag'] for i in range(n_sim)],
+                'iteration' : [res_gau3[i]['iteration'] for i in range(n_sim)],
+                'estimated m2' : [res_gau3[i]['Estimated morphometricity'] for i in range(n_sim)],
+                'estimated sd' : [res_gau3[i]['Estimated standard error'] for i in range(n_sim)],
+                'theoretical sd': [math.sqrt(res_gau3[i]['Morphological variance']) for i in range(n_sim)],
+                'residual var': [res_gau3[i]['Residual variance'] for i in range(n_sim)],
+                'ReML likelihood': [res_gau3[i]['ReML likelihood'] for i in range(n_sim)],
+                'aic': [res_gau3[i]['AIC'] for i in range(n_sim)],
+                'bic': [res_gau3[i]['BIC'] for i in range(n_sim)]
                 }
 
 
@@ -357,3 +364,4 @@ def sim(N, M, L, m2, n_sim, kernel = "linear", fisher="expected"):
         return['Input kernel is not supported']
 
 '''
+# %%
