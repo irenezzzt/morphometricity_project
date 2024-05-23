@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# Add link to paper (afterwards)
 # %%
 # libraries
 import numpy as np
@@ -21,9 +22,9 @@ def gauss_ker(vec,mat, S2):
     Input:
         - mat: matrix of size n x M, n individuals, M imaging measures
         - vec: vector of size M, observation for one specific individual 
-        - S2: vector of size M, pre-calculated variance for each imaging measures
+        - S2:  vector of size M, pre-calculated weighting parameter (by default variance) for each imaging measures
     Output:
-        - r: vector of size N, similarity between zi and each individual in Z
+        - r:   vector of size N, similarity between zi and each individual in Z
     '''
     n, M = mat.shape 
     r = np.exp(- np.divide( (mat-vec)**2, S2*M).sum(axis=1))
@@ -87,6 +88,8 @@ def compute_FisherInfo(y, P, K, method):
     else:
         return 'Method for fisher information is not accepted'
     
+    # check exceptions in Py
+
     Info = [[Info_gg, Info_ge], [Info_ge, Info_ee]]
     return Info
 # %%
@@ -126,12 +129,12 @@ def EM_update(y, X, K, Va, Ve):
 
     return [V, P, lik_new]
 # %%
-def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
+def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4), standardize = False):
     '''
     The function fit the linear mixed effect model (1) by EM algorithm and estimate the morphometricity together with its standard error
         y = Xb + a + e    (1)
     where Cov(a) = Va * K, e ~ N(0, Ve) i.i.d.
-
+ 
     Input of Linear mixed effect model:
         - y nx1 array: phenotype
         - X nxl array: l covariates such as age, sex, site etc.  
@@ -180,8 +183,11 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
     # set values if negative and normalize  
     T = np.array([Va, Ve])
     T[T < 0] = 10e-6 * Vp
-    # Va, Ve = T/sum(T)
-    Va, Ve = T
+    # Va, Ve = T/sum(T)  # run for three fisher to see the problem of no normalization here
+    if standardize:
+        Va, Ve = T/sum(T)
+    else:
+        Va, Ve = T
 
     # initial update covariance and projection
     lik_old = float('inf')
@@ -214,13 +220,13 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
 
     inv_Info = np.linalg.inv(Info)
     std_err = np.sqrt( (m2/Va)**2 * (1-m2)**2 * inv_Info[0][0] - 2 * (1-m2) * m2 * inv_Info[0][1] + m2**2 * inv_Info[1][1] ) 
-    # m2 = Va/(Va+Ve) 
+
 
     # diagnosis of convergence
     if iter == max_iter and abs(lik_new - lik_old)>=tol :
-        res = 'ReML algorithm did not converge'
+        convergence_flag = 'ReML algorithm did not converge'
     else:
-        res = 'ReML algorithm has converged'
+        convergence_flag = 'ReML algorithm has converged'
     # model selection cretiria
    
     S = np.identity(n = N) - Ve * P
@@ -229,7 +235,7 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
     BIC = N*np.log(RSS) + np.log(N)*np.trace(S)
     
     return { 
-        'flag': res,
+        'flag': convergence_flag,
         'iteration': iter,
         'Estimated morphometricity': m2, 
         'Estimated standard error': std_err,
