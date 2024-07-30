@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
-
+ 
+# Add link to paper (afterwards)
 # %%
 # libraries
 import numpy as np
 from numpy import linalg
-from numpy.core.numeric import Inf, identity
+from numpy._core.numeric import inf, identity
 import pandas as pd
-import csv
+#import csv
 import itertools
-import matplotlib.pyplot as plt
-
+#import matplotlib.pyplot as plt
 
 
 
@@ -22,9 +22,9 @@ def gauss_ker(vec,mat, S2):
     Input:
         - mat: matrix of size n x M, n individuals, M imaging measures
         - vec: vector of size M, observation for one specific individual 
-        - S2: vector of size M, pre-calculated variance for each imaging measures
+        - S2:  vector of size M, pre-calculated weighting parameter (by default variance) for each imaging measures
     Output:
-        - r: vector of size N, similarity between zi and each individual in Z
+        - r:   vector of size N, similarity between zi and each individual in Z
     '''
     n, M = mat.shape 
     r = np.exp(- np.divide( (mat-vec)**2, S2*M).sum(axis=1))
@@ -66,12 +66,12 @@ def compute_FisherInfo(y, P, K, method):
     '''
     This is a helper function to compute the Fisher information matrix 
     Input:
-        - y: nx1 array, phenotype
-        - P: nxn array, projection matrix that maps y to yhat
-        - K: anatomic similarity matrix
+        - y: n x 1 array, phenotype
+        - P: n x n array, projection matrix that maps y to yhat
+        - K: n x n array, anatomic similarity matrix
         - method: string, "average", "expected", or "observed" Fisher information
     Output:
-        - Info: 2x2 array for two parameters Va(anatomical variance) and Ve(residual variance)
+        - Info: 2 x 2 array for two parameters Va(anatomical variance) and Ve(residual variance)
     '''
     if method == "average" :
         Info_gg = 0.5*y.T.dot(P).dot(K).dot(P).dot(K).dot(P).dot(y)
@@ -88,10 +88,26 @@ def compute_FisherInfo(y, P, K, method):
     else:
         return 'Method for fisher information is not accepted'
     
+    # check exceptions in Py
+
     Info = [[Info_gg, Info_ge], [Info_ge, Info_ee]]
     return Info
 # %%
 def EM_update(y, X, K, Va, Ve):
+    '''
+    This is a helper function to run the expectation maximization algorithm iteration updates 
+    Input:
+        - y:    nx1 array, phenotype
+        - X:    nxl array: l covariates such as age, sex, site etc.  
+        - K:    nxn array, between-subject anatomic similarity matrix
+        - Va:   numeric, variance explained by the ASM from the last iteration
+        - Ve:   numeric, residual variance from the last iteration
+    
+    Output:
+        - V:    nxn array, variance covariance matrix of y
+        - P:    nxn array, new projection matrix P that maps y to yhat
+        - liknew: numeric, new likelihood of this iteration
+    '''
     N = K.shape[0]
     # update covariance matrix V of y:
     V = Va * K + Ve * np.identity(n = N)
@@ -113,12 +129,12 @@ def EM_update(y, X, K, Va, Ve):
 
     return [V, P, lik_new]
 # %%
-def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
+def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4), standardize = False):
     '''
     The function fit the linear mixed effect model (1) by EM algorithm and estimate the morphometricity together with its standard error
         y = Xb + a + e    (1)
     where Cov(a) = Va * K, e ~ N(0, Ve) i.i.d.
-
+ 
     Input of Linear mixed effect model:
         - y nx1 array: phenotype
         - X nxl array: l covariates such as age, sex, site etc.  
@@ -150,7 +166,11 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
         K = U.dot(D).dot(U.T) 
     else:
         K=K
-
+        
+    # check Fisher info method input
+    if method not in {"average", "expected", "observed"} :
+        return 'Method for fisher information is not accepted'
+    
     # initialize the anatomic variance, residual variance, and projection matrix.
     Vp = np.var(y)
     Va = Ve = 1/2*Vp
@@ -163,8 +183,10 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
     # set values if negative and normalize  
     T = np.array([Va, Ve])
     T[T < 0] = 10e-6 * Vp
-    # Va, Ve = T/sum(T)
+    # Va, Ve = T/sum(T)  # run for three fisher to see the problem of no normalization here
     Va, Ve = T
+    
+
 
     # initial update covariance and projection
     lik_old = float('inf')
@@ -184,7 +206,8 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
         T = np.array([Va,Ve]) + np.linalg.solve(Info, Score)
         # set variance values to be 1e-6*Vp if negative (Vp=1 for normalized y) and normalize
         T[T < 0] = 1e-6  
-        if method == "observed":
+        #if method == "observed":
+        if standardize:
              Va, Ve = T/sum(T)
         else:
             Va, Ve = T
@@ -197,13 +220,13 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
 
     inv_Info = np.linalg.inv(Info)
     std_err = np.sqrt( (m2/Va)**2 * (1-m2)**2 * inv_Info[0][0] - 2 * (1-m2) * m2 * inv_Info[0][1] + m2**2 * inv_Info[1][1] ) 
-    # m2 = Va/(Va+Ve) 
+
 
     # diagnosis of convergence
     if iter == max_iter and abs(lik_new - lik_old)>=tol :
-        res = 'ReML algorithm did not converge'
+        convergence_flag = 'ReML algorithm did not converge'
     else:
-        res = 'ReML algorithm has converged'
+        convergence_flag = 'ReML algorithm has converged'
     # model selection cretiria
    
     S = np.identity(n = N) - Ve * P
@@ -212,7 +235,7 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
     BIC = N*np.log(RSS) + np.log(N)*np.trace(S)
     
     return { 
-        'flag': res,
+        'flag': convergence_flag,
         'iteration': iter,
         'Estimated morphometricity': m2, 
         'Estimated standard error': std_err,
@@ -232,171 +255,7 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4)):
 
 
 # %%
-# functions for simulation
-
-def sim(N, M, L, m2, n_sim, kernel = "linear", fisher="expected"):
-    Va = m2*10; Ve = (1-m2)*10
-    res_lin = np.ndarray(shape = (n_sim, 9))
-    res_gau0 = np.ndarray(shape = (n_sim, 9))
-    res_gau1 = np.ndarray(shape = (n_sim, 9))
-    res_gau2 = np.ndarray(shape = (n_sim, 9))
-    res_gau3 = np.ndarray(shape = (n_sim, 9))
-
-    beta = np.random.normal(loc=0, scale=1, size = L)  # fixed effect
-
-    if kernel == "linear":
-        for i in range(n_sim):
-            np.random.seed(i*13+7)
-            Z = np.random.normal(0, 2, size = (N,M)) # brain imaging 
-            ASM = np.corrcoef(Z) 
-
-            age = np.random.normal(56, 8 ,size=(N,1))
-            sex = np.random.binomial(50, 0.54, size=(N,1)) # following the summary stats on ukb
-
-            X = np.concatenate((age, sex), axis=1) # covariates
-            beta0i = np.random.multivariate_normal(mean = [0] * N, cov = Va*ASM)  # random effect
-            eps = np.random.normal(loc=0, scale=Ve**(1/2), size = N)  # random error
-            y = beta0i + beta.dot(X.T) + eps # response
-            
-            
-            ASM_lin = ASM 
-            ASM_gau0 = gauss_similarity(Z, width=2)
-            ASM_gau1 = gauss_similarity(Z, width=1)
-            ASM_gau2 = gauss_similarity(Z, width=1/2)
-            ASM_gau3 = gauss_similarity(Z, width=1/4)
-
-            temp = morph_fit(y=y, X=X, K=ASM_lin, method=fisher, max_iter=100)   
-            res_lin[i] = [ (temp['flag'] == 'ReML algorithm has converged')*1,
-                temp['iteration'], temp['Estimated morphometricity'], 
-                temp['Estimated standard error'], temp['Morphological variance'], 
-                temp['Residual variance'], temp['ReML likelihood'],
-                temp['AIC'], temp['BIC'] ]    
-        
-
-            temp = morph_fit(y=y, X=X, K=ASM_gau0, method=fisher, max_iter=100)   
-            res_gau0[i] = [ (temp['flag'] == 'ReML algorithm has converged')*1,
-                temp['iteration'], temp['Estimated morphometricity'], 
-                temp['Estimated standard error'], temp['Morphological variance'], 
-                temp['Residual variance'], temp['ReML likelihood'],
-                temp['AIC'], temp['BIC'] ]
-        
-            temp = morph_fit(y=y, X=X, K=ASM_gau1, method=fisher, max_iter=100)     
-            res_gau1[i] = [ (temp['flag'] == 'ReML algorithm has converged')*1,
-                temp['iteration'], temp['Estimated morphometricity'], 
-                temp['Estimated standard error'], temp['Morphological variance'], 
-                temp['Residual variance'], temp['ReML likelihood'],
-                temp['AIC'], temp['BIC'] ]
-       
-            temp = morph_fit(y=y, X=X, K=ASM_gau2, method=fisher, max_iter=100)   
-            res_gau2[i] = [ (temp['flag'] == 'ReML algorithm has converged')*1,
-                temp['iteration'], temp['Estimated morphometricity'], 
-                temp['Estimated standard error'], temp['Morphological variance'], 
-                temp['Residual variance'], temp['ReML likelihood'],
-                temp['AIC'], temp['BIC'] ]
-          
-            temp = morph_fit(y=y, X=X, K=ASM_gau3, method=fisher, max_iter=100)   
-            res_gau3[i] = [ (temp['flag'] == 'ReML algorithm has converged')*1,
-                temp['iteration'], temp['Estimated morphometricity'], 
-                temp['Estimated standard error'], temp['Morphological variance'], 
-                temp['Residual variance'], temp['ReML likelihood'],
-                temp['AIC'], temp['BIC'] ]
-             
-        #res_lin = res_lin[res_lin[:,0]==1] 
-        #res_lin = res_lin[np.isnan(res_lin[:,3])==False] # subset of the iters converge and with positive variance estimates
-        
-        #res_gau0 = res_gau0[res_gau0[:,0]==1] 
-        #res_gau0 = res_gau0[np.isnan(res_gau0[:,3])==False] # subset of the iters converge and with positive variance estimates
-
-        #res_gau1 = res_gau1[res_gau1[:,0]==1] 
-        #res_gau1 = res_gau1[np.isnan(res_gau1[:,3])==False] # subset of the iters converge and with positive variance estimates
-
-        #res_gau2 = res_gau2[res_gau2[:,0]==1] 
-        #res_gau2 = res_gau2[np.isnan(res_gau2[:,3])==False] # subset of the iters converge and with positive variance estimates
-            
-        #res_gau3 = res_gau3[res_gau3[:,0]==1] 
-        #res_gau3 = res_gau3[np.isnan(res_gau3[:,3])==False] # subset of the iters converge and with positive variance estimates
-            
-        return{'res_lin': res_lin, 'res_gau0': res_gau0, 'res_gau1':res_gau1, 'res_gau2':res_gau2, 'res_gau3':res_gau3}
-    
-    elif kernel =="gaussian":
-        for i in range(n_sim):
-            np.random.seed(i*13+7)
-            Z = np.random.normal(0, 2, size = (N,M)) # brain imaging 
-            ASM = gauss_similarity(Z, width=1)
-
-            age = np.random.normal(56, 8 ,size=(N,1))
-            sex = np.random.binomial(50, 0.54, size=(N,1)) # following the summary stats on ukb
-
-            X = np.concatenate((age, sex), axis=1) # covariates
-            beta0i = np.random.multivariate_normal(mean = [0] * N, cov = Va*ASM)  # random effect
-            eps = np.random.normal(loc=0, scale=Ve**(1/2), size = N)  # random error
-            y = beta0i + beta.dot(X.T) + eps # response
-             
-            ASM_lin = np.corrcoef(Z)
-            ASM_gau0 = gauss_similarity(Z, width=1/2)
-            ASM_gau1 = gauss_similarity(Z, width=1)
-            ASM_gau2 = gauss_similarity(Z, width=2)
-            ASM_gau3 = gauss_similarity(Z, width=4)
-
-            temp = morph_fit(y=y, X=X, K=ASM_lin, method=fisher, max_iter=100)   
-            res_lin[i] = [ (temp['flag'] == 'ReML algorithm has converged')*1,
-                temp['iteration'], temp['Estimated morphometricity'], 
-                temp['Estimated standard error'], temp['Morphological variance'], 
-                temp['Residual variance'], temp['ReML likelihood'],
-                temp['AIC'], temp['BIC'] ]    
-        
-
-            temp = morph_fit(y=y, X=X, K=ASM_gau0, method=fisher, max_iter=100)   
-            res_gau0[i] = [ (temp['flag'] == 'ReML algorithm has converged')*1,
-                temp['iteration'], temp['Estimated morphometricity'], 
-                temp['Estimated standard error'], temp['Morphological variance'], 
-                temp['Residual variance'], temp['ReML likelihood'],
-                temp['AIC'], temp['BIC'] ]
-        
-            temp = morph_fit(y=y, X=X, K=ASM_gau1, method=fisher, max_iter=100)     
-            res_gau1[i] = [ (temp['flag'] == 'ReML algorithm has converged')*1,
-                temp['iteration'], temp['Estimated morphometricity'], 
-                temp['Estimated standard error'], temp['Morphological variance'], 
-                temp['Residual variance'], temp['ReML likelihood'],
-                temp['AIC'], temp['BIC'] ]
-       
-            temp = morph_fit(y=y, X=X, K=ASM_gau2, method=fisher, max_iter=100)   
-            res_gau2[i] = [ (temp['flag'] == 'ReML algorithm has converged')*1,
-                temp['iteration'], temp['Estimated morphometricity'], 
-                temp['Estimated standard error'], temp['Morphological variance'], 
-                temp['Residual variance'], temp['ReML likelihood'],
-                temp['AIC'], temp['BIC'] ]
-          
-            temp = morph_fit(y=y, X=X, K=ASM_gau3, method=fisher, max_iter=100)   
-            res_gau3[i] = [ (temp['flag'] == 'ReML algorithm has converged')*1,
-                temp['iteration'], temp['Estimated morphometricity'], 
-                temp['Estimated standard error'], temp['Morphological variance'], 
-                temp['Residual variance'], temp['ReML likelihood'],
-                temp['AIC'], temp['BIC'] ]
-             
-        #res_lin = res_lin[res_lin[:,0]==1] 
-        #res_lin = res_lin[np.isnan(res_lin[:,3])==False] # subset of the iters converge and with positive variance estimates
-        
-        #res_gau0 = res_gau0[res_gau0[:,0]==1] 
-        #res_gau0 = res_gau0[np.isnan(res_gau0[:,3])==False] # subset of the iters converge and with positive variance estimates
-
-        #res_gau1 = res_gau1[res_gau1[:,0]==1] 
-        #res_gau1 = res_gau1[np.isnan(res_gau1[:,3])==False] # subset of the iters converge and with positive variance estimates
-
-        #res_gau2 = res_gau2[res_gau2[:,0]==1] 
-        #res_gau2 = res_gau2[np.isnan(res_gau2[:,3])==False] # subset of the iters converge and with positive variance estimates
-            
-        #res_gau3 = res_gau3[res_gau3[:,0]==1] 
-        #res_gau3 = res_gau3[np.isnan(res_gau3[:,3])==False] # subset of the iters converge and with positive variance estimates
-            
-        return{'res_lin': res_lin, 'res_gau0': res_gau0, 'res_gau1':res_gau1, 'res_gau2':res_gau2, 'res_gau3':res_gau3}
-
-    else:
-        return['Input kernel is not supported']
-
 
 
      
 
-# %%
- 
