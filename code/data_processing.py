@@ -3,7 +3,7 @@
 
 import numpy as np
 from numpy import linalg
-from numpy.core.numeric import Inf, identity
+from numpy._core.numeric import identity
 import pandas as pd
 import csv
 import itertools
@@ -16,14 +16,14 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import os
 
-datadir = os.path.join(os.path.expanduser('~'),'data')
+datadir = os.path.join(os.path.expanduser('~'),'Documents/GitHub/morphometricity_backup/data')
 # need to check if datadir exists and if not create it
 # if not os.path.exists(datadir):
 #    os.path.mkdir(datadir)
 os.chdir(datadir)
 
 # %%
-iter_csv = pd.read_csv('ukb47552.csv', iterator=True, chunksize=10000,error_bad_lines=False)
+iter_csv = pd.read_csv('ukb47552.csv', iterator=True, chunksize=10000, on_bad_lines='error')
 data = pd.concat([chunk.dropna(how='all') for chunk in iter_csv] )
 data.shape #502462 subjects, 2545-1 measurements
 
@@ -36,13 +36,13 @@ rows = [s for s, x in enumerate(field_id["Description"]) if "thickness" in x or 
 filtered_id = field_id.loc[rows]["Field ID"].apply(str)
 
 # %%
-iter_csv = pd.read_csv('ukb46307_demographics.csv', iterator=True, chunksize=10000,error_bad_lines=False)
+iter_csv = pd.read_csv('ukb46307_demographics.csv', iterator=True, chunksize=10000,on_bad_lines='error')
 data_demographics = pd.concat ([chunk.dropna(how='all') for chunk in iter_csv] )
 data_demographics.shape #502462 subjects, 11 measurements
 data_demographics = data_demographics[['eid','age_at_recruitment', 'sex']]
 # %%
 merge_data = data.merge(right = data_demographics, how="inner", on="eid")
-
+merge_data.shape
 
 # %%
 # extract more phenotypes
@@ -59,6 +59,9 @@ column_codes = {
 
 phenotype = pd.read_csv("current.csv", usecols=column_codes.keys())
 phenotype = phenotype.dropna(axis=0, how="all")
+phenotype.shape
+# 6801 subjects in the phenotype data
+
 # %%
 merge_data2 = merge_data.merge(right=phenotype, how="inner", on="eid")
 merge_data2.shape
@@ -79,8 +82,8 @@ instance2_dat.drop(columns=['eid', 'age_at_recruitment', 'sex', '20191-0.0', '20
 instance3_dat.drop(columns=['eid', 'age_at_recruitment', 'sex', '20191-0.0', '20544-0.2', '20544-0.12','20544-0.14', '21003-2.0'], axis=1)
 instance2_dat.dropna(axis = 0, how = "all", inplace=True)
 instance3_dat.dropna(axis = 0, how = "all", inplace=True)
-print(instance2_dat.shape, instance3_dat.shape)
-# Consider only complete cases, each instances have 43107 subjects with 62
+
+# Consider only complete cases, each instances have 6801 subjects with 132 features (including morphological measurs and phenotypes)
 
 # %%
 # Take a subset of instance2 first
