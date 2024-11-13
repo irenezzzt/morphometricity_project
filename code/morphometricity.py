@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
-
+ 
 # Add link to paper (afterwards)
 # %%
 # libraries
 import numpy as np
 #from numpy import linalg
-from numpy.core.numeric import Inf, identity
+from numpy._core.numeric import identity
+from numpy import linalg
 import pandas as pd
+
 #import csv
 import itertools
 #import matplotlib.pyplot as plt
@@ -183,11 +185,13 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4), standardize = False):
     # set values if negative and normalize  
     T = np.array([Va, Ve])
     T[T < 0] = 10e-6 * Vp
-    # Va, Ve = T/sum(T)  # run for three fisher to see the problem of no normalization here
+    # Va, Ve = T/sum(T)  # run for three fisher to see the problem of no normalization here  # run for three fisher to see the problem of no normalization here
     if standardize:
         Va, Ve = T/sum(T)
     else:
         Va, Ve = T
+    
+
 
     # initial update covariance and projection
     lik_old = float('inf')
@@ -207,7 +211,8 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4), standardize = False):
         T = np.array([Va,Ve]) + np.linalg.solve(Info, Score)
         # set variance values to be 1e-6*Vp if negative (Vp=1 for normalized y) and normalize
         T[T < 0] = 1e-6  
-        if method == "observed":
+        #if method == "observed":
+        if standardize:
              Va, Ve = T/sum(T)
         else:
             Va, Ve = T
