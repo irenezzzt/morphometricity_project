@@ -2,28 +2,40 @@
 # analyzing the ukb data for 7 traits
 import numpy as np
 from numpy import linalg
-from numpy.core.numeric import Inf, identity
+from numpy._core.numeric import identity
 import pandas as pd
 import csv
 import itertools
-import statsmodels.regression.mixed_linear_model as sm
-import seaborn as sn
+#import statsmodels.regression.mixed_linear_model as sm
+
 import matplotlib.pyplot as plt
 import random
 from sklearn import preprocessing
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
+import morphometricity
 
 os.chdir('/Users/tingzhang/Documents/GitHub/morphometricity/data')
 
-
-from morphometricity import compute_Score, compute_FisherInfo, EM_update, morph_fit, gauss_ker, gauss_similarity
 data = pd.read_csv("ses2.csv")
+
+
+column_codes = {
+    "eid":"eid",
+    "21003-2.0": "age_at_ses2",
+    "20191-0.0":"fluid intelligence",
+    "20544-0.2":"scz",
+    "20544-0.12":"autism",
+    "20544-0.14":"adhd"}
+
+
 # %% 
 # age at recruitement
 age_data = data.drop(columns=['eid','20191-0.0', '20544-0.2', '20544-0.12','20544-0.14','21003-2.0'])
 age_data = age_data.dropna(axis=0, how="any")
 age_data.shape
+
+
 
 # y for phenotype: age at recruitment, 
 # x for covariates sex (other analyses will include age) 
@@ -37,22 +49,22 @@ z=age_data.drop(columns=['age_at_recruitment','sex'])
 
 # generate ASMs from z with different kernels: 
 # 1. linear 
-# 2. standard Gaussian 
-# 3. Gaussian bandwidth 0.5 
+# 2. Gaussian bandwidth 4 
+# 3. Standard Gaussian 
 # 4. Gaussian bandwidth 0.25
 # (not including larger bandwidth because the simulation results shows that smaller bandwidth tends to give higher m2)
 #   
 K = np.corrcoef(z) 
-r1=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+r1= morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1)
-r2=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K = morphometricity.gauss_similarity(Z=z, width=4)
+r2= morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1/2)
-r3=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K = morphometricity.gauss_similarity(Z=z, width=1)
+r3= morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1/4)
-r4=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K = morphometricity.gauss_similarity(Z=z, width=1/4)
+r4= morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
 # %%
 age_res = np.array([ [r1['Estimated morphometricity'], r1['Estimated standard error'], r1['AIC']],
@@ -70,16 +82,16 @@ x=age_data['sex'].to_numpy().reshape(-1,1)
 z=age_data.drop(columns=['21003-2.0','sex']) 
 # 627 subjects, 125 image features
 K = np.corrcoef(z) 
-r1=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+r1= morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1)
-r2=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K = morphometricity.gauss_similarity(Z=z, width=4)
+r2= morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1/2)
-r3=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K = morphometricity.gauss_similarity(Z=z, width=1)
+r3 = morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1/4)
-r4=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K =  morphometricity.gauss_similarity(Z=z, width=1/4)
+r4=  morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
 age_ses2_res = np.array([ [r1['Estimated morphometricity'], r1['AIC']],
                      [r2['Estimated morphometricity'], r2['AIC']],
@@ -99,16 +111,16 @@ z=IQ_data.drop(columns=['age_at_recruitment','sex','20191-0.0'])
 # 343 subjects, 125 image features
 
 K = np.corrcoef(z) 
-r1=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+r1=  morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1)
-r2=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K =  morphometricity.gauss_similarity(Z=z, width=4)
+r2=  morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1/2)
-r3=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K =  morphometricity.gauss_similarity(Z=z, width=1)
+r3=  morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1/4)
-r4=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K =  morphometricity.gauss_similarity(Z=z, width=1/4)
+r4=  morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
 
 IQ_res = np.array([ [r1['Estimated morphometricity'], r1['AIC']],
@@ -130,16 +142,16 @@ z.shape
 # 46 subjects, 125 image features
 
 K = np.corrcoef(z) 
-r1=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+r1=  morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1)
-r2=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K =  morphometricity.gauss_similarity(Z=z, width=4)
+r2=  morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1/2)
-r3 = morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K = morphometricity.gauss_similarity(Z=z, width=1)
+r3 = morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
-K = gauss_similarity(Z=z, width=1/4)
-r4=morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
+K = morphometricity.gauss_similarity(Z=z, width=1/4)
+r4= morphometricity.morph_fit(y=y, X=x, K=K, method="expected", max_iter=50)
 
 scz_res = np.array([ [r1['Estimated morphometricity'], r1['AIC']],
                      [r2['Estimated morphometricity'], r2['AIC']],
@@ -160,9 +172,9 @@ ad_data.shape
 # %%
 # plotting
 
-X = ['Age recruit','Age ses2','Fluid Intelligence','Schizophrenia']
+X = ['Age recruit','Age 2nd Visit','Fluid Intelligence','Schizophrenia']
 Y0 = [1, 1, 0.95, 0.5]
-Y1 = [age_res[0][0]-0.7, age_ses2_res[0][0]-0.7, IQ_res[0][0]-0.7, scz_res[0][0]-0.4]
+Y1 = [age_res[0][0], age_ses2_res[0][0], IQ_res[0][0], scz_res[0][0]]
 Y2 = [age_res[1][0], age_ses2_res[1][0],IQ_res[1][0], scz_res[1][0]]
 Y3 = [age_res[2][0], age_ses2_res[2][0],IQ_res[2][0], scz_res[2][0]]
 Y4 = [age_res[3][0], age_ses2_res[3][0],IQ_res[3][0], scz_res[3][0]]
@@ -175,18 +187,19 @@ Y5 = [0.89, 0.89, 0.15, 0.71]
 # sczophrenia:      Matthew Bracher-Smith 2022 (UKB)
 
 X_axis = np.arange(len(X))
-  
+
+plt.bar(X_axis -0.3, Y0, 0.1, label="Sabuncu's estimation")  
 plt.bar(X_axis - 0.2, Y1, 0.1, label = 'Linear')
 plt.bar(X_axis - 0.1, Y2, 0.1, label = 'Gaussian 1')
 plt.bar(X_axis, Y3, 0.1, label = 'Gaussian 1/2')
 plt.bar(X_axis + 0.1, Y4, 0.1, label = 'Gaussian 1/4')
-plt.bar(X_axis + 0.2, Y5, 0.1, label = 'Literature')
+plt.bar(X_axis + 0.2, Y5, 0.1, label = 'Literature Predicted R2')
     
 plt.xticks(X_axis, X)
-plt.xlabel("Traits")
-plt.ylabel("Prediction morphometricity")
-plt.legend()
-plt.savefig('ukb_traits_morph.png',dpi=150)
+#plt.xlabel("Traits")
+plt.ylabel("Predicted morphometricity")
+plt.legend(bbox_to_anchor=(0.5, -0.3), loc="lower center", ncol=2)
+plt.savefig('ukb_traits_morph.pdf', ,dpi=150)
 
 # %%
 # Comments:

@@ -5,9 +5,11 @@
 # %%
 # libraries
 import numpy as np
+#from numpy import linalg
+from numpy._core.numeric import identity
 from numpy import linalg
-from numpy._core.numeric import inf, identity
 import pandas as pd
+
 #import csv
 import itertools
 #import matplotlib.pyplot as plt
@@ -183,8 +185,11 @@ def morph_fit(y, X, K, method, max_iter=100, tol=10**(-4), standardize = False):
     # set values if negative and normalize  
     T = np.array([Va, Ve])
     T[T < 0] = 10e-6 * Vp
-    # Va, Ve = T/sum(T)  # run for three fisher to see the problem of no normalization here
-    Va, Ve = T
+    # Va, Ve = T/sum(T)  # run for three fisher to see the problem of no normalization here  # run for three fisher to see the problem of no normalization here
+    if standardize:
+        Va, Ve = T/sum(T)
+    else:
+        Va, Ve = T
     
 
 
